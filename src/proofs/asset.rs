@@ -28,7 +28,7 @@ pub struct AssetProof {
 
 impl AssetProof {
     pub fn create(
-        x: Option<&Field256>,
+        x: Option<Field256>,
         y: &Point,
         bal: BigUint,
         g: &Point,
@@ -40,8 +40,7 @@ impl AssetProof {
         } else {
             Field256::zero()
         };
-        let zero = Field256::zero();
-        let xhat = x.unwrap_or(&zero);
+        let xhat = x.unwrap_or(Field256::zero());
 
         // Commitment to balance
         let v = Field256::rand();
@@ -130,8 +129,8 @@ mod tests {
         let g = crate::g();
         let h = crate::h();
 
-        let x = &Field256::from(1);
-        let y = &point_mul(Point::g(), x);
+        let x = Field256::from(1);
+        let y = &point_mul(Point::g(), &x);
         let bal = BigUint::from(123u8);
         let commitment = AssetProof::create(Some(x), y, bal, &g, &h);
 
@@ -143,8 +142,8 @@ mod tests {
         let g = crate::g();
         let h = crate::h();
 
-        let x = &Field256::from(1);
-        let y = &point_mul(Point::g(), x);
+        let x = Field256::from(1);
+        let y = &point_mul(Point::g(), &x);
         let bal = BigUint::from(123u8);
         let commitment = AssetProof::create(None, y, bal, &g, &h);
 

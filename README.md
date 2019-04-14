@@ -31,4 +31,7 @@ of those features in this project so far:
 
 Coming soon. In the meantime, see `tests/integration_test.rs` for current API.
 
+Currently this only works with small sets of addresses and liabilities since it does everything in
+memory. Future work will include persistence to allow it to scale up.
+
 [Paper]: https://crypto.stanford.edu/~dabo/pubs/abstracts/provisions.html
