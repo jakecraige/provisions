@@ -1,8 +1,10 @@
 use crate::fields::Field256;
+use num_bigint::BigUint;
 use secp256k1::constants::{GENERATOR_X, GENERATOR_Y};
 use secp256k1::{All, PublicKey, Secp256k1};
+use std::fmt;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Point {
     pk: PublicKey,
     secp256k1: Secp256k1<All>,
@@ -89,6 +91,19 @@ impl Point {
             pk: new_point,
             secp256k1: Secp256k1::new(),
             infinity: false,
+        }
+    }
+}
+
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.infinity {
+            write!(f, "(inf, inf)")
+        } else {
+            let bytes = self.serialize_uncompressed();
+            let x = BigUint::from_bytes_be(&bytes[1..33]);
+            let y = BigUint::from_bytes_be(&bytes[33..65]);
+            write!(f, "({}, {})", x.to_str_radix(16), y.to_str_radix(16))
         }
     }
 }

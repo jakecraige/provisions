@@ -3,6 +3,7 @@ use crate::secp256k1::Point;
 use num_bigint::BigUint;
 use sha2::{Digest as Sha2Digest, Sha256};
 
+mod asset;
 mod binary_commitment;
 mod liability;
 mod schnorr;
