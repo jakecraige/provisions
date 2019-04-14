@@ -3,6 +3,7 @@ use crate::secp256k1::Point;
 use num_bigint::BigUint;
 use sha2::{Digest as Sha2Digest, Sha256};
 
+mod binary_commitment;
 mod schnorr;
 
 /// Compute a challenge value from a set of points using the Fiat-Shamir heuristic

@@ -1,10 +1,10 @@
-use num_bigint::BigUint;
+use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
 use rand::rngs::OsRng;
 use rand::Rng;
 use secp256k1::constants::CURVE_ORDER;
 use std::fmt;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Neg, Sub};
 
 const FIELD_BYTES: usize = 32;
 
@@ -18,13 +18,31 @@ pub struct Field256 {
 impl Field256 {
     /// Initialize a new element within the field. If the number is too large it will be modded
     /// into the field.
-    fn new(value: BigUint) -> Field256 {
-        let p = BigUint::from_bytes_be(&CURVE_ORDER);
+    pub fn new(value: BigUint) -> Field256 {
+        let p = Field256::p();
 
         Field256 {
             value: value.mod_floor(&p),
             p,
         }
+    }
+
+    /// Initialize a field element from big-endian bytes
+    pub fn from_bytes_be(bytes: &[u8]) -> Field256 {
+        let value = BigUint::from_bytes_be(bytes);
+        Field256::new(value)
+    }
+
+    pub fn p() -> BigUint {
+        BigUint::from_bytes_be(&CURVE_ORDER)
+    }
+
+    pub fn one() -> Field256 {
+        Field256::new(BigUint::from(1u8))
+    }
+
+    pub fn zero() -> Field256 {
+        Field256::new(BigUint::from(0u8))
     }
 
     pub fn rand() -> Field256 {
@@ -61,17 +79,47 @@ impl Field256 {
         }
         out
     }
-}
 
-impl From<u32> for Field256 {
-    fn from(value: u32) -> Field256 {
-        Field256::new(BigUint::from(value))
+    pub fn is_zero(&self) -> bool {
+        self.value == BigUint::from(0u8)
+    }
+
+    /// True if the value is 0 or 1. False otherwise.
+    pub fn is_binary(&self) -> bool {
+        self.value == BigUint::from(0u8) || self.value == BigUint::from(1u8)
     }
 }
 
 impl From<BigUint> for Field256 {
     fn from(value: BigUint) -> Field256 {
         Field256::new(value)
+    }
+}
+
+impl From<BigInt> for Field256 {
+    fn from(value: BigInt) -> Field256 {
+        let p = BigInt::from_bytes_be(Sign::Plus, &CURVE_ORDER);
+        let ivalue = value.mod_floor(&p);
+        let uvalue = ivalue.to_biguint().expect("no negative");
+        Field256::from(uvalue)
+    }
+}
+
+impl From<u8> for Field256 {
+    fn from(value: u8) -> Field256 {
+        Field256::new(BigUint::from(value))
+    }
+}
+
+impl From<i8> for Field256 {
+    fn from(value: i8) -> Field256 {
+        Field256::from(BigInt::from(value))
+    }
+}
+
+impl From<i32> for Field256 {
+    fn from(value: i32) -> Field256 {
+        Field256::from(BigInt::from(value))
     }
 }
 
@@ -104,8 +152,64 @@ impl<'a> Mul<&'a Field256> for Field256 {
     type Output = Field256;
 
     fn mul(self, rhs: &'a Field256) -> Field256 {
-        let value = (self.value * &rhs.value).mod_floor(&self.p);
-        Field256::new(BigUint::from(value))
+        &self * rhs
+    }
+}
+
+impl<'a> Mul<Field256> for &'a Field256 {
+    type Output = Field256;
+
+    fn mul(self, rhs: Field256) -> Field256 {
+        self * &rhs
+    }
+}
+
+impl<'a, 'b> Mul<&'a Field256> for &'b Field256 {
+    type Output = Field256;
+
+    fn mul(self, rhs: &'a Field256) -> Field256 {
+        let value = (&self.value * &rhs.value).mod_floor(&self.p);
+        Field256::new(value)
+    }
+}
+
+impl Neg for Field256 {
+    type Output = Field256;
+
+    fn neg(self) -> Field256 {
+        let value = self.p - self.value;
+        Field256::new(value)
+    }
+}
+
+impl Sub<Field256> for Field256 {
+    type Output = Field256;
+
+    fn sub(self, rhs: Field256) -> Field256 {
+        self - &rhs
+    }
+}
+
+impl<'a> Sub<&'a Field256> for Field256 {
+    type Output = Field256;
+
+    fn sub(self, rhs: &'a Field256) -> Field256 {
+        &self - rhs
+    }
+}
+
+impl<'a, 'b> Sub<&'a Field256> for &'b Field256 {
+    type Output = Field256;
+
+    fn sub(self, rhs: &'a Field256) -> Field256 {
+        if rhs.value < self.value {
+            let value = &self.value - &rhs.value;
+            Field256::new(value)
+        } else {
+            let neg_overflow = &rhs.value - &self.value;
+            let value = &self.p - neg_overflow;
+            Field256::new(value)
+        }
     }
 }
 

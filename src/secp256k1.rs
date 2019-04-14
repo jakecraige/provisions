@@ -6,6 +6,7 @@ use secp256k1::{All, PublicKey, Secp256k1};
 pub struct Point {
     pk: PublicKey,
     secp256k1: Secp256k1<All>,
+    infinity: bool,
 }
 
 impl Point {
@@ -26,16 +27,63 @@ impl Point {
 
     /// Multiply the point by a scalar value.
     pub fn mul(&mut self, n: &Field256) -> &mut Point {
-        self.pk
-            .mul_assign(&self.secp256k1, &n.to_big_endian())
-            .expect("invalid multiplication");
+        if n.is_zero() {
+            self.infinity = true
+        } else {
+            if self.infinity {
+                // Multiplying infinity by n is a noop
+            } else {
+                self.pk
+                    .mul_assign(&self.secp256k1, &n.to_big_endian())
+                    .expect("invalid multiplication");
+            }
+        }
         self
     }
 
     /// Add the point to another point.
     pub fn add(&mut self, other: &Point) -> &mut Point {
-        self.pk = self.pk.combine(&other.pk).expect("invalid addition");
+        if self.infinity {
+            // 0 + Q = Q or 0 + 0 = 0
+            self.pk = other.pk;
+            self.infinity = other.infinity;
+        } else if other.infinity {
+            // P + O = P
+            // Noop
+        } else {
+            // P + Q = R
+            self.pk = self.pk.combine(&other.pk).expect("invalid addition");
+            self.infinity = false;
+        }
         self
+    }
+
+    /// Subtract one point from the other
+    pub fn sub(&mut self, other: &Point) -> &mut Point {
+        self.add(&other.inverse())
+    }
+
+    /// Return the additive inverse of the point. -P where P + -P = 0
+    pub fn inverse(&self) -> Point {
+        // The secp256k1 library doesn't provide raw access to the coordinates or allow
+        // initializing from them directly. So to flip the y coordinate we need to serialize it,
+        // parse the y coordinate and flip it, update the serialized version, an initialize a new
+        // point.
+        let mut sec = self.serialize_uncompressed();
+        println!("{:?}", sec[33..].to_vec());
+        let y = Field256::from_bytes_be(&sec[33..]);
+        println!("{:?}", y.to_big_endian());
+        let y_inv = (-y).to_big_endian();
+        for i in 0..y_inv.len() {
+            sec[33 + i] = y_inv[i];
+        }
+        let new_point = PublicKey::from_slice(&sec).expect("point to be valid");
+
+        Point {
+            pk: new_point,
+            secp256k1: Secp256k1::new(),
+            infinity: false,
+        }
     }
 }
 
@@ -44,6 +92,7 @@ impl From<PublicKey> for Point {
         Point {
             pk,
             secp256k1: Secp256k1::new(),
+            infinity: false,
         }
     }
 }
