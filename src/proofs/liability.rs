@@ -1,20 +1,20 @@
 use crate::bigint::biguint_to_bits_le;
 use crate::fields::Field256;
-use crate::proofs::binary_commitment::BinaryCommitment;
-use crate::secp256k1::Point;
+use crate::proofs::binary::BinaryProof;
+use crate::secp256k1::{pedersen_commitment, point_mul, Point};
 use num_bigint::BigUint;
 use num_traits::identities::Zero;
 use num_traits::pow::Pow;
-use sha2::{Digest as Sha2Digest, Sha256};
+use sha2::{Digest, Sha256};
 
-struct LiabilityCommitment {
+struct LiabilityProof {
     g: Point,
     h: Point,
 
     /// Customer Identifier
     cid: Vec<u8>,
-    /// Commitments to each bit of the balance
-    bits: Vec<BinaryCommitment>,
+    /// Proofs of knowledge for each bit of the balance
+    bits: Vec<BinaryProof>,
 
     /// The fields (n, r) are considered secrets and should only be provided to the customer
     /// they relate to.
@@ -33,35 +33,35 @@ fn compute_cid(identifier: &[u8], n: &BigUint) -> Vec<u8> {
     Sha256::digest(&data).to_vec()
 }
 
-impl LiabilityCommitment {
-    fn create(identifier: &[u8], balance: &BigUint, g: Point, h: Point) -> LiabilityCommitment {
+impl LiabilityProof {
+    fn create(identifier: &[u8], balance: &BigUint, g: Point, h: Point) -> LiabilityProof {
         let bits = biguint_to_bits_le(balance, BALANCE_BITS);
         let mut r = BigUint::zero();
 
-        let mut bit_commitments: Vec<BinaryCommitment> = Vec::with_capacity(bits.len());
+        let mut bit_proofs: Vec<BinaryProof> = Vec::with_capacity(bits.len());
         for (i, bit) in bits.iter().enumerate() {
             let r_i = Field256::rand();
             r += &r_i.value << i;
-            let comm = BinaryCommitment::create(&Field256::from(*bit), &r_i, &g, &h);
-            bit_commitments.push(comm);
+            let comm = BinaryProof::create(&Field256::from(*bit), &r_i, &g, &h);
+            bit_proofs.push(comm);
         }
 
         let n = Field256::rand().value;
         let cid = compute_cid(identifier, &n);
 
-        LiabilityCommitment {
+        LiabilityProof {
             g,
             h,
             cid,
-            bits: bit_commitments,
+            bits: bit_proofs,
             n,
             r,
         }
     }
 
-    /// Verify that all the binary commitments are proven.
+    /// Verify that all the binary proofd are proven.
     fn verify(&self) -> bool {
-        // For the public verification, we simply verify that all the binary commitments are
+        // For the public verification, we simply verify that all the binary proofs are
         // correct. The customer will verify their balance individually.
         self.bits.iter().all(|bit| bit.verify())
     }
@@ -74,12 +74,9 @@ impl LiabilityCommitment {
         }
 
         // g^b * h^r
-        let mut gb = self.g.clone();
-        gb.mul(&Field256::new(balance.clone()));
-        let mut hr = self.h.clone();
-        hr.mul(&Field256::new(self.r.clone()));
-        let mut rhs = gb;
-        rhs.add(&hr);
+        let bal = &Field256::new(balance.clone());
+        let r = &Field256::new(self.r.clone());
+        let rhs = pedersen_commitment(self.g.clone(), &bal, self.h.clone(), &r);
 
         return self.z() == rhs;
     }
@@ -90,8 +87,7 @@ impl LiabilityCommitment {
 
         for (i, bit) in self.bits.iter().enumerate() {
             let exp = Field256::from(BigUint::from(2u8).pow(i));
-            let mut z_i = bit.l.clone();
-            z_i.mul(&exp);
+            let z_i = point_mul(bit.l.clone(), &exp);
             z.add(&z_i);
         }
 
@@ -106,12 +102,11 @@ mod tests {
     #[test]
     fn verify_public_liability_commitment() {
         let g = Point::g();
-        let mut h = Point::g();
-        h.mul(&Field256::from(2));
+        let h = point_mul(Point::g(), &Field256::from(2));
         let username = b"testuser";
         let balance = BigUint::from(10u8);
 
-        let commitment = LiabilityCommitment::create(&username[..], &balance, g, h);
+        let commitment = LiabilityProof::create(&username[..], &balance, g, h);
 
         assert!(commitment.verify() "commitment not able to be verified");
     }
@@ -119,12 +114,11 @@ mod tests {
     #[test]
     fn verify_customer_liability_commitment() {
         let g = Point::g();
-        let mut h = Point::g();
-        h.mul(&Field256::from(2));
+        let h = point_mul(Point::g(), &Field256::from(2));
         let username = b"testuser";
         let balance = BigUint::from(10u8);
 
-        let commitment = LiabilityCommitment::create(&username[..], &balance, g, h);
+        let commitment = LiabilityProof::create(&username[..], &balance, g, h);
 
         assert!(commitment.verify_as_customer(&username[..], &balance) "commitment not able to be verified");
     }

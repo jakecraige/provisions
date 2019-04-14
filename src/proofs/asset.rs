@@ -1,9 +1,9 @@
 use crate::fields::Field256;
-use crate::proofs::binary_commitment::BinaryCommitment;
+use crate::proofs::binary::BinaryProof;
 use crate::proofs::compute_challenge;
 use crate::secp256k1::{pedersen_commitment, point_mul, point_mul_add, Point};
 
-pub struct AssetCommitment {
+pub struct AssetProof {
     g: Point,
     h: Point,
     y: Point,
@@ -22,17 +22,17 @@ pub struct AssetCommitment {
     v: Field256,
 
     /// balance_comm.l is == p
-    balance_comm: BinaryCommitment,
+    balance_comm: BinaryProof,
 }
 
-impl AssetCommitment {
+impl AssetProof {
     pub fn create(
         x: Option<&Field256>,
         y: &Point,
         bal: &Field256,
         g: &Point,
         h: &Point,
-    ) -> AssetCommitment {
+    ) -> AssetProof {
         let b = point_mul(g.clone(), bal);
         let s = if x.is_some() {
             Field256::one()
@@ -44,7 +44,7 @@ impl AssetCommitment {
 
         // Commitment to balance
         let v = Field256::rand();
-        let balance_comm = BinaryCommitment::create(&s, &v, &b, &h);
+        let balance_comm = BinaryProof::create(&s, &v, &b, &h);
 
         // Commitment to private key knowledge
         let t = Field256::rand();
@@ -66,7 +66,7 @@ impl AssetCommitment {
         let rt = &u3 + c * &t;
         let rxhat = &u4 + c * xhat;
 
-        AssetCommitment {
+        AssetProof {
             g: g.clone(),
             h: h.clone(),
             y: y.clone(),
@@ -128,7 +128,7 @@ mod tests {
         let x = &Field256::from(1);
         let y = &point_mul(Point::g(), x);
         let bal = &Field256::from(123);
-        let commitment = AssetCommitment::create(Some(x), y, bal, &g, &h);
+        let commitment = AssetProof::create(Some(x), y, bal, &g, &h);
 
         assert!(commitment.verify() "commitment not able to be verified");
     }
@@ -141,7 +141,7 @@ mod tests {
         let x = &Field256::from(1);
         let y = &point_mul(Point::g(), x);
         let bal = &Field256::from(123);
-        let commitment = AssetCommitment::create(None, y, bal, &g, &h);
+        let commitment = AssetProof::create(None, y, bal, &g, &h);
 
         assert!(commitment.verify() "commitment not able to be verified");
     }

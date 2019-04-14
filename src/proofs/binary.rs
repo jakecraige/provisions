@@ -23,7 +23,7 @@ use crate::secp256k1::{pedersen_commitment, point_add, point_mul, Point};
 ///     h^r1 = a1(lg^-1)^c1
 ///
 /// Our implementation uses the Fiat-Shamir heuristic to make the protocol non-interactive.
-pub struct BinaryCommitment {
+pub struct BinaryProof {
     g: Point,
     h: Point,
     pub l: Point,
@@ -34,9 +34,9 @@ pub struct BinaryCommitment {
     r1: Field256,
 }
 
-impl BinaryCommitment {
+impl BinaryProof {
     /// Create a non-interactive binary commitment to x with the pedersen commitment g^x*h^y
-    pub fn create(x: &Field256, y: &Field256, g: &Point, h: &Point) -> BinaryCommitment {
+    pub fn create(x: &Field256, y: &Field256, g: &Point, h: &Point) -> BinaryProof {
         if !x.is_binary() {
             panic!("Only comitting to 0 or 1 is supported. Was: {}", x);
         }
@@ -56,7 +56,7 @@ impl BinaryCommitment {
         let r0 = u0 + (&c - &c1) * y;
         let r1 = u1 + &c1 * y;
 
-        BinaryCommitment {
+        BinaryProof {
             g: g.clone(),
             h: h.clone(),
             l,
@@ -110,7 +110,7 @@ mod tests {
         let y = &Field256::rand();
 
         let x = &Field256::from(1);
-        let commitment = BinaryCommitment::create(x, y, &g, &h);
+        let commitment = BinaryProof::create(x, y, &g, &h);
 
         assert!(commitment.verify() "commitment not able to be verified");
     }
@@ -123,7 +123,7 @@ mod tests {
         let y = &Field256::rand();
 
         let x = &Field256::from(0);
-        let commitment = BinaryCommitment::create(x, y, &g, &h);
+        let commitment = BinaryProof::create(x, y, &g, &h);
 
         assert!(commitment.verify() "commitment not able to be verified");
     }
@@ -137,6 +137,6 @@ mod tests {
         let y = &Field256::rand();
 
         let x = &Field256::from(25);
-        BinaryCommitment::create(x, y, &g, &h);
+        BinaryProof::create(x, y, &g, &h);
     }
 }
