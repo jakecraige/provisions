@@ -16,7 +16,7 @@ cryptographer. It is very likely insecure and _should not be used in any product
 
 ## Supported Features
 
-The protocol multiple proofs and a few optional extensions. This is the status of support
+The protocol includes multiple proofs and a few optional extensions. This is the status of support
 of those features in this project so far:
 
 | Name | Description | Status |
@@ -32,6 +32,46 @@ of those features in this project so far:
 Coming soon. In the meantime, see `tests/integration_test.rs` for current API.
 
 Currently this only works with small sets of addresses and liabilities since it does everything in
-memory. Future work will include persistence to allow it to scale up.
+memory.
+
+## Future Work
+
+A list of features that I'd like to eventually have this library support.
+
+- **Persistence:** This is needed to run on larger datasets as well as to actually implement this in
+  a system. You have to provide the data in a format available for others to verify.
+- **Proof of Surplus:** Many exchanges operate on a surplus, this is a necessary feature for any
+  practical usage.
+- **A CLI:** A CLI interface that can accept data from some data source like CSV and produce a proof
+  that can be published and then used to verify the proof on that data.
+
+## Open Problems
+
+There's a few open problems that would need to be supported for practical usage or improvements
+from when the paper was published, these are:
+
+**Support for cold-storage keys**
+
+Exchanges operate with a majority of funds in cold-storage. To have an option of publishing a Proof
+of Solvency we need to support this use case that doesn't require regularly having cold-storage
+private keys available. The idea of ["Valet
+Keys"](https://rwc.iacr.org/2016/Slides/Provisions%20talk%20RWC.pdf) has been proposed but is not
+documented in a paper yet. We'll need to investigate this further and see how we could integrate
+this.
+
+**Support for addresses**
+
+The protocol currently requires publishing all public keys alongside some extras to create an
+anonimity set. This is problematic for cold-storage if there are no sends from the address but it
+has received funds. If they are included in the proof it would break some of the privacy of the
+protocol since it would be easy to confirm which of these are not on chain by diffing with the
+published PKs on chain. This could be done with proving systems like zkSNARKS or Bulletproofs but
+would take some work to integrate it with the protocol.
+
+**General Proof Optimizations**
+
+All the proofs in the protocol scale linearly and are quite large. By using newer cryptographic
+tools we could reduce the size of the proofs significantly. Bulletproofs for range proofs have been
+proposed for this.
 
 [Paper]: https://crypto.stanford.edu/~dabo/pubs/abstracts/provisions.html
