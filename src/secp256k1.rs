@@ -21,6 +21,12 @@ impl Point {
         Point::from(g)
     }
 
+    pub fn infinity() -> Point {
+        let mut out = Point::g();
+        out.infinity = true;
+        out
+    }
+
     pub fn serialize_uncompressed(&self) -> [u8; 65] {
         self.pk.serialize_uncompressed()
     }

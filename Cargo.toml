@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 secp256k1 = { version = "0.12.2", features = ["rand"] }
-bigint = "4.4.1"
 rand = "0.6.5"
 sha2 = "0.8.0"
 num-bigint = "0.2"

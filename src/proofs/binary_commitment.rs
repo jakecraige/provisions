@@ -23,10 +23,10 @@ use crate::secp256k1::Point;
 ///     h^r1 = a1(lg^-1)^c1
 ///
 /// Our implementation uses the Fiat-Shamir heuristic to make the protocol non-interactive.
-struct BinaryCommitment {
+pub struct BinaryCommitment {
     g: Point,
     h: Point,
-    l: Point,
+    pub l: Point,
     a0: Point,
     a1: Point,
     c1: Field256,
@@ -36,11 +36,10 @@ struct BinaryCommitment {
 
 impl BinaryCommitment {
     /// Create a non-interactive binary commitment to x with the pedersen commitment g^x*h^y
-    fn create(x: &Field256, g: &Point, h: &Point) -> BinaryCommitment {
+    pub fn create(x: &Field256, y: &Field256, g: &Point, h: &Point) -> BinaryCommitment {
         if !x.is_binary() {
             panic!("Only comitting to 0 or 1 is supported. Was: {}", x);
         }
-        let y = &Field256::rand();
 
         // l = g^x*h^y
         let mut gx = g.clone();
@@ -86,7 +85,7 @@ impl BinaryCommitment {
     }
 
     /// Verify if the proof is valid or not
-    fn verify(&self) -> bool {
+    pub fn verify(&self) -> bool {
         let c = compute_challenge(&[&self.g, &self.h, &self.l, &self.a0, &self.a1]);
 
         // h^r0 = a0(l)^(c-c1)
@@ -122,9 +121,10 @@ mod tests {
         let g = Point::g();
         let mut h = Point::g();
         h.mul(&Field256::from(2));
+        let y = &Field256::rand();
 
         let x = &Field256::from(1);
-        let commitment = BinaryCommitment::create(x, &g, &h);
+        let commitment = BinaryCommitment::create(x, y, &g, &h);
 
         assert!(commitment.verify() "commitment not able to be verified");
     }
@@ -134,9 +134,10 @@ mod tests {
         let g = Point::g();
         let mut h = Point::g();
         h.mul(&Field256::from(2));
+        let y = &Field256::rand();
 
         let x = &Field256::from(0);
-        let commitment = BinaryCommitment::create(x, &g, &h);
+        let commitment = BinaryCommitment::create(x, y, &g, &h);
 
         assert!(commitment.verify() "commitment not able to be verified");
     }
@@ -147,8 +148,9 @@ mod tests {
         let g = Point::g();
         let mut h = Point::g();
         h.mul(&Field256::from(2));
+        let y = &Field256::rand();
 
         let x = &Field256::from(25);
-        BinaryCommitment::create(x, &g, &h);
+        BinaryCommitment::create(x, y, &g, &h);
     }
 }
