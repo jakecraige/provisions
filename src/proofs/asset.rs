@@ -19,7 +19,7 @@ pub struct AssetProof {
     rxhat: Field256,
 
     /// for solvency verification, secret value and only known to E
-    v: Field256,
+    pub v: Field256,
 
     /// balance_comm.l is == p
     balance_comm: BinaryProof,
@@ -91,7 +91,7 @@ impl AssetProof {
             self.h.clone(),
             self.y.clone(),
             self.b.clone(),
-            self.balance_comm.l.clone(),
+            self.p_ref().clone(),
             self.l.clone(),
             self.a1.clone(),
             self.a2.clone(),
@@ -113,6 +113,10 @@ impl AssetProof {
         let balance_verified = self.balance_comm.verify();
 
         protocol_verified && balance_verified
+    }
+
+    pub fn p_ref(&self) -> &Point {
+        &self.balance_comm.l
     }
 }
 

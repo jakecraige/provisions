@@ -2,7 +2,7 @@ use crate::fields::Field256;
 use crate::proofs::compute_challenge;
 use crate::secp256k1::Point;
 
-struct SchnorrProof {
+pub struct SchnorrProof {
     s: Field256,
     g: Point,
     y: Point,
@@ -11,7 +11,7 @@ struct SchnorrProof {
 
 impl SchnorrProof {
     /// Create commitment to x such that y = g^x
-    fn create(x: Field256, g: Point, y: Point) -> SchnorrProof {
+    pub fn create(x: Field256, g: Point, y: Point) -> SchnorrProof {
         // t = g^r
         let r = Field256::rand();
         let mut t = g.clone();
@@ -25,7 +25,7 @@ impl SchnorrProof {
     }
 
     /// Verify if the commitment is valid or not
-    fn verify(&self) -> bool {
+    pub fn verify(&self) -> bool {
         // g^s
         let mut lhs = self.g.clone();
         lhs.mul(&self.s);

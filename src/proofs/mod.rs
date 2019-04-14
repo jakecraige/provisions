@@ -7,6 +7,7 @@ mod asset;
 mod binary;
 mod liability;
 mod schnorr;
+mod solvency;
 
 /// Compute a challenge value from a set of points using the Fiat-Shamir heuristic
 fn compute_challenge(points: &[&Point]) -> Field256 {

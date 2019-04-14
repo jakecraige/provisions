@@ -7,7 +7,7 @@ use num_traits::identities::Zero;
 use num_traits::pow::Pow;
 use sha2::{Digest, Sha256};
 
-struct LiabilityProof {
+pub struct LiabilityProof {
     g: Point,
     h: Point,
 
@@ -19,10 +19,11 @@ struct LiabilityProof {
     /// The fields (n, r) are considered secrets and should only be provided to the customer
     /// they relate to.
 
+    // TODO: Should these be Field256's?
     /// Customer Identifier Salt
     n: BigUint,
     /// Summation of bit blinding factors
-    r: BigUint,
+    pub r: BigUint,
 }
 
 const BALANCE_BITS: usize = 51;
@@ -34,7 +35,7 @@ fn compute_cid(identifier: &[u8], n: &BigUint) -> Vec<u8> {
 }
 
 impl LiabilityProof {
-    fn create(identifier: &[u8], balance: &BigUint, g: Point, h: Point) -> LiabilityProof {
+    pub fn create(identifier: &[u8], balance: &BigUint, g: Point, h: Point) -> LiabilityProof {
         let bits = biguint_to_bits_le(balance, BALANCE_BITS);
         let mut r = BigUint::zero();
 
@@ -60,14 +61,14 @@ impl LiabilityProof {
     }
 
     /// Verify that all the binary proofd are proven.
-    fn verify(&self) -> bool {
+    pub fn verify(&self) -> bool {
         // For the public verification, we simply verify that all the binary proofs are
         // correct. The customer will verify their balance individually.
         self.bits.iter().all(|bit| bit.verify())
     }
 
     /// Customer verification process where they confirm the balance was computed correctly
-    fn verify_as_customer(&self, identifier: &[u8], balance: &BigUint) -> bool {
+    pub fn verify_as_customer(&self, identifier: &[u8], balance: &BigUint) -> bool {
         let computed_cid = compute_cid(identifier, &self.n);
         if computed_cid != self.cid {
             return false;
@@ -82,7 +83,7 @@ impl LiabilityProof {
     }
 
     /// Commitment to the balance as the sum of the bit commitments
-    fn z(&self) -> Point {
+    pub fn z(&self) -> Point {
         let mut z = Point::infinity();
 
         for (i, bit) in self.bits.iter().enumerate() {

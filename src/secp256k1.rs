@@ -145,6 +145,17 @@ pub fn point_mul_add(g: Point, x: &Field256, h: &Point) -> Point {
     point_add(point_mul(g, x), h)
 }
 
+/// n_0 * n_1 * ... * n_len
+pub fn point_sum(points: &[&Point]) -> Point {
+    let mut out = Point::infinity();
+
+    for point in points.iter() {
+        out.add(point);
+    }
+
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
