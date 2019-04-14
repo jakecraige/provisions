@@ -1,5 +1,7 @@
+use crate::bigint::biguint_to_bytes_be;
 use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
+use num_traits::{One, Zero};
 use rand::rngs::OsRng;
 use rand::Rng;
 use secp256k1::constants::CURVE_ORDER;
@@ -41,6 +43,10 @@ impl Field256 {
         Field256::new(BigUint::from(1u8))
     }
 
+    pub fn neg_one() -> Field256 {
+        Field256::from(BigInt::from(-1))
+    }
+
     pub fn zero() -> Field256 {
         Field256::new(BigUint::from(0u8))
     }
@@ -64,29 +70,20 @@ impl Field256 {
         Field256::from(r1 + r2 + r3 + r4)
     }
 
-    pub fn to_big_endian(&self) -> [u8; FIELD_BYTES] {
-        let bytes = self.value.to_bytes_be();
-        if bytes.len() > FIELD_BYTES {
-            panic!("Unexpected number larger than field modulo");
-        }
-
+    pub fn to_bytes_be(&self) -> [u8; FIELD_BYTES] {
+        let bytes = biguint_to_bytes_be(&self.value, FIELD_BYTES);
         let mut out = [0; FIELD_BYTES];
-        // Since we use a big-endian representation and the bytes may be less than 32 long, we
-        // calculate the index offset to fill in bytes in their proper place.
-        let byte_offset = FIELD_BYTES - bytes.len();
-        for (i, byte) in bytes.iter().enumerate() {
-            out[byte_offset + i] = *byte;
-        }
+        out.copy_from_slice(&bytes);
         out
     }
 
     pub fn is_zero(&self) -> bool {
-        self.value == BigUint::from(0u8)
+        self.value == BigUint::zero()
     }
 
     /// True if the value is 0 or 1. False otherwise.
     pub fn is_binary(&self) -> bool {
-        self.value == BigUint::from(0u8) || self.value == BigUint::from(1u8)
+        self.value == BigUint::zero() || self.value == BigUint::one()
     }
 }
 

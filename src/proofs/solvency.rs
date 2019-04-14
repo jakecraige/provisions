@@ -1,17 +1,15 @@
 use crate::fields::Field256;
-use crate::proofs::asset::AssetProof;
-use crate::proofs::liability::LiabilityProof;
 use crate::proofs::schnorr::SchnorrProof;
-use crate::secp256k1::{point_add, point_mul, point_sum, Point};
-use num_bigint::BigUint;
-use num_bigint::ToBigInt;
+use crate::proofs::{AssetProof, LiabilityProof};
+use crate::secp256k1::{point_add, point_inverse, point_sum, Point};
+use num_bigint::{BigUint, ToBigInt};
 
-struct SolvencyProof {
+pub struct SolvencyProof {
     schnorr: SchnorrProof,
 }
 
 impl SolvencyProof {
-    fn create(
+    pub fn create(
         asset_proofs: &[AssetProof],
         liability_proofs: &[LiabilityProof],
         h: Point,
@@ -26,7 +24,7 @@ impl SolvencyProof {
             liability_commitments.iter().map(|comm| comm).collect();
         let z_liabilities = point_sum(&liability_commitments);
 
-        let z_solvency = point_add(z_assets, &point_mul(z_liabilities, &Field256::from(-1)));
+        let z_solvency = point_add(z_assets, &point_inverse(z_liabilities));
 
         let v_sum: BigUint = asset_proofs.iter().map(|proof| &proof.v.value).sum();
         let r_sum: BigUint = liability_proofs.iter().map(|proof| &proof.r).sum();
@@ -36,7 +34,7 @@ impl SolvencyProof {
         SolvencyProof { schnorr: proof }
     }
 
-    fn verify(&self) -> bool {
+    pub fn verify(&self) -> bool {
         self.schnorr.verify()
     }
 }
@@ -44,22 +42,23 @@ impl SolvencyProof {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::secp256k1::point_mul;
 
     #[test]
     fn solvency_create_and_verify() {
-        let g = Point::g();
-        let h = point_mul(Point::g(), &Field256::from(2));
+        let g = crate::g();
+        let h = crate::h();
 
         let x = &Field256::from(1);
         let y = &point_mul(Point::g(), x);
-        let bal = &Field256::from(10);
+        let bal = BigUint::from(10u8);
         let asset = AssetProof::create(Some(x), y, bal, &g, &h);
 
         let username = b"testuser";
         let balance = BigUint::from(10u8);
         let liability = LiabilityProof::create(&username[..], &balance, g, h);
 
-        let h = point_mul(Point::g(), &Field256::from(2));
+        let h = crate::h();
         let commitment = SolvencyProof::create(&[asset], &[liability], h);
 
         assert!(commitment.verify() "commitment not able to be verified");

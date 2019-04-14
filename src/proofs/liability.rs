@@ -102,8 +102,8 @@ mod tests {
 
     #[test]
     fn verify_public_liability_commitment() {
-        let g = Point::g();
-        let h = point_mul(Point::g(), &Field256::from(2));
+        let g = crate::g();
+        let h = crate::h();
         let username = b"testuser";
         let balance = BigUint::from(10u8);
 
@@ -114,8 +114,8 @@ mod tests {
 
     #[test]
     fn verify_customer_liability_commitment() {
-        let g = Point::g();
-        let h = point_mul(Point::g(), &Field256::from(2));
+        let g = crate::g();
+        let h = crate::h();
         let username = b"testuser";
         let balance = BigUint::from(10u8);
 

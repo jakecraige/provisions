@@ -19,6 +19,21 @@ pub fn biguint_to_bits_le(value: &BigUint, len: usize) -> Vec<u8> {
     bits
 }
 
+/// Return a vector for of bytes of length len.
+pub fn biguint_to_bytes_be(value: &BigUint, len: usize) -> Vec<u8> {
+    let bytes = value.to_bytes_be();
+    if bytes.len() > len {
+        panic!("Unexpected number larger than len");
+    }
+
+    let mut out = Vec::with_capacity(len);
+    let padding: Vec<u8> = repeat(0).take(len - bytes.len()).collect();
+    out.extend(padding);
+    out.extend(bytes);
+
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

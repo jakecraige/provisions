@@ -9,6 +9,10 @@ mod liability;
 mod schnorr;
 mod solvency;
 
+pub use self::asset::AssetProof;
+pub use self::liability::LiabilityProof;
+pub use self::solvency::SolvencyProof;
+
 /// Compute a challenge value from a set of points using the Fiat-Shamir heuristic
 fn compute_challenge(points: &[&Point]) -> Field256 {
     let mut hasher = Sha256::new();
@@ -25,9 +29,8 @@ mod tests {
 
     #[test]
     fn challenge_is_deterministic() {
-        let p1 = Point::g();
-        let mut p2 = Point::g();
-        p2.mul(&Field256::from(2));
+        let p1 = crate::g();
+        let p2 = crate::h();
 
         assert_eq!(compute_challenge(&[&p1]), compute_challenge(&[&p1]));
         assert_eq!(

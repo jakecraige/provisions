@@ -1,8 +1,17 @@
+use crate::bigint::biguint_to_bytes_be;
+use crate::fields::field_sqrt;
 use crate::fields::Field256;
 use num_bigint::BigUint;
 use secp256k1::constants::{GENERATOR_X, GENERATOR_Y};
-use secp256k1::{All, PublicKey, Secp256k1};
+use secp256k1::{All, Error, PublicKey, Secp256k1};
+use sha2::{Digest, Sha256};
 use std::fmt;
+
+/// The order of the Field Z_p used for Secp256k1
+pub fn field_order() -> BigUint {
+    let hex = b"fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f";
+    BigUint::parse_bytes(hex, 16).unwrap()
+}
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Point {
@@ -42,7 +51,7 @@ impl Point {
                 // Multiplying infinity by n is a noop
             } else {
                 self.pk
-                    .mul_assign(&self.secp256k1, &n.to_big_endian())
+                    .mul_assign(&self.secp256k1, &n.to_bytes_be())
                     .expect("invalid multiplication");
             }
         }
@@ -78,10 +87,8 @@ impl Point {
         // parse the y coordinate and flip it, update the serialized version, an initialize a new
         // point.
         let mut sec = self.serialize_uncompressed();
-        println!("{:?}", sec[33..].to_vec());
         let y = Field256::from_bytes_be(&sec[33..]);
-        println!("{:?}", y.to_big_endian());
-        let y_inv = (-y).to_big_endian();
+        let y_inv = (-y).to_bytes_be();
         for i in 0..y_inv.len() {
             sec[33 + i] = y_inv[i];
         }
@@ -92,6 +99,25 @@ impl Point {
             secp256k1: Secp256k1::new(),
             infinity: false,
         }
+    }
+
+    /// Hash arbitrary content into a point on the curve.
+    ///
+    /// This is done SHA256 hashing the content into a number and using that as x.
+    /// Then we solve for y s.t y = x^3 + 7.
+    pub fn from_hash(content: &[u8]) -> Result<Point, Error> {
+        let q = field_order();
+        let x = BigUint::from_bytes_be(Sha256::digest(content).as_slice());
+        let rhs = x.modpow(&BigUint::from(3u8), &q) + BigUint::from(7u8);
+        let y = field_sqrt(&rhs, &q);
+
+        let mut g_bytes = Vec::with_capacity(65);
+        g_bytes.push(0x04);
+        g_bytes.extend_from_slice(&biguint_to_bytes_be(&x, 32));
+        g_bytes.extend_from_slice(&biguint_to_bytes_be(&y, 32));
+        let g = PublicKey::from_slice(&g_bytes)?;
+
+        Ok(Point::from(g))
     }
 }
 
@@ -156,6 +182,12 @@ pub fn point_sum(points: &[&Point]) -> Point {
     out
 }
 
+/// Find the additive inverse -P s.t. P + -P = 0
+/// Equivalent to: g^-1
+pub fn point_inverse(g: Point) -> Point {
+    point_mul(g, &Field256::neg_one())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,5 +209,10 @@ mod tests {
                 0xFB, 0x10, 0xD4, 0xB8,
             ]
         );
+    }
+
+    #[test]
+    fn secp256k1_from_hash() {
+        Point::from_hash(b"PROVISIONS").expect("invalid point produced");
     }
 }

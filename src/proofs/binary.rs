@@ -1,6 +1,6 @@
 use crate::fields::Field256;
 use crate::proofs::compute_challenge;
-use crate::secp256k1::{pedersen_commitment, point_add, point_mul, Point};
+use crate::secp256k1::{pedersen_commitment, point_add, point_inverse, point_mul, Point};
 
 /// Commitment to x given: (g, h, l = g^x*h^y).
 ///
@@ -85,10 +85,7 @@ impl BinaryProof {
         let p2_rhs = point_add(
             self.a1.clone(),
             &point_mul(
-                point_add(
-                    self.l.clone(),
-                    &point_mul(self.g.clone(), &Field256::from(-1i8)),
-                ),
+                point_add(self.l.clone(), &point_inverse(self.g.clone())),
                 &self.c1,
             ),
         );
@@ -104,9 +101,8 @@ mod tests {
 
     #[test]
     fn verify_commit_to_true() {
-        let g = Point::g();
-        let mut h = Point::g();
-        h.mul(&Field256::from(2));
+        let g = crate::g();
+        let h = crate::h();
         let y = &Field256::rand();
 
         let x = &Field256::from(1);
@@ -117,9 +113,8 @@ mod tests {
 
     #[test]
     fn verify_commit_to_false() {
-        let g = Point::g();
-        let mut h = Point::g();
-        h.mul(&Field256::from(2));
+        let g = crate::g();
+        let h = crate::h();
         let y = &Field256::rand();
 
         let x = &Field256::from(0);
@@ -131,9 +126,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn verify_x_is_validated() {
-        let g = Point::g();
-        let mut h = Point::g();
-        h.mul(&Field256::from(2));
+        let g = crate::g();
+        let h = crate::h();
         let y = &Field256::rand();
 
         let x = &Field256::from(25);

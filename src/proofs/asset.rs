@@ -2,6 +2,7 @@ use crate::fields::Field256;
 use crate::proofs::binary::BinaryProof;
 use crate::proofs::compute_challenge;
 use crate::secp256k1::{pedersen_commitment, point_mul, point_mul_add, Point};
+use num_bigint::BigUint;
 
 pub struct AssetProof {
     g: Point,
@@ -29,11 +30,11 @@ impl AssetProof {
     pub fn create(
         x: Option<&Field256>,
         y: &Point,
-        bal: &Field256,
+        bal: BigUint,
         g: &Point,
         h: &Point,
     ) -> AssetProof {
-        let b = point_mul(g.clone(), bal);
+        let b = point_mul(g.clone(), &Field256::new(bal));
         let s = if x.is_some() {
             Field256::one()
         } else {
@@ -126,12 +127,12 @@ mod tests {
 
     #[test]
     fn verify_asset_commitment_with_sk() {
-        let g = Point::g();
-        let h = point_mul(Point::g(), &Field256::from(175));
+        let g = crate::g();
+        let h = crate::h();
 
         let x = &Field256::from(1);
         let y = &point_mul(Point::g(), x);
-        let bal = &Field256::from(123);
+        let bal = BigUint::from(123u8);
         let commitment = AssetProof::create(Some(x), y, bal, &g, &h);
 
         assert!(commitment.verify() "commitment not able to be verified");
@@ -139,12 +140,12 @@ mod tests {
 
     #[test]
     fn verify_asset_commitment_without_sk() {
-        let g = Point::g();
-        let h = point_mul(Point::g(), &Field256::from(175));
+        let g = crate::g();
+        let h = crate::h();
 
         let x = &Field256::from(1);
         let y = &point_mul(Point::g(), x);
-        let bal = &Field256::from(123);
+        let bal = BigUint::from(123u8);
         let commitment = AssetProof::create(None, y, bal, &g, &h);
 
         assert!(commitment.verify() "commitment not able to be verified");
