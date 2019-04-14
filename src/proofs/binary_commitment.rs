@@ -1,6 +1,6 @@
 use crate::fields::Field256;
 use crate::proofs::compute_challenge;
-use crate::secp256k1::Point;
+use crate::secp256k1::{pedersen_commitment, point_add, point_mul, Point};
 
 /// Commitment to x given: (g, h, l = g^x*h^y).
 ///
@@ -42,30 +42,14 @@ impl BinaryCommitment {
         }
 
         // l = g^x*h^y
-        let mut gx = g.clone();
-        gx.mul(x);
-        let mut hy = h.clone();
-        hy.mul(y);
-        let mut l = gx;
-        l.add(&hy);
+        let l = pedersen_commitment(g.clone(), x, h.clone(), y);
 
         let (u0, u1, cf) = (Field256::rand(), Field256::rand(), Field256::rand());
 
         // a0 = h^u0 * g^(-x*cf),
-        let mut hu0 = h.clone();
-        hu0.mul(&u0);
-        let mut gxcf = g.clone();
-        gxcf.mul(&-(x * &cf));
-        let mut a0 = hu0;
-        a0.add(&gxcf);
-
+        let a0 = pedersen_commitment(h.clone(), &u0, g.clone(), &-(x * &cf));
         // a1 = h^u1 * g^((1-x)*cf)
-        let mut hu1 = h.clone();
-        hu1.mul(&u1);
-        let mut gxcf = g.clone();
-        gxcf.mul(&((Field256::one() - x) * &cf));
-        let mut a1 = hu1;
-        a1.add(&gxcf);
+        let a1 = pedersen_commitment(h.clone(), &u1, g.clone(), &((Field256::one() - x) * &cf));
 
         let c = compute_challenge(&[&g, &h, &l, &a0, &a1]);
         let c1 = x * (&c - &cf) + (Field256::one() - x) * &cf;
@@ -89,24 +73,26 @@ impl BinaryCommitment {
         let c = compute_challenge(&[&self.g, &self.h, &self.l, &self.a0, &self.a1]);
 
         // h^r0 = a0(l)^(c-c1)
-        let mut hr0 = self.h.clone();
-        hr0.mul(&self.r0);
-        let mut a0l = self.a0.clone();
-        let mut lc = self.l.clone();
-        lc.mul(&(&c - &self.c1));
-        a0l.add(&lc);
-        let p1 = hr0 == a0l;
+        let p1_lhs = point_mul(self.h.clone(), &self.r0);
+        let p1_rhs = point_add(
+            self.a0.clone(),
+            &point_mul(self.l.clone(), &(&c - &self.c1)),
+        );
+        let p1 = p1_lhs == p1_rhs;
 
         // h^r1 = a1(lg^-1)^c1
-        let mut hr1 = self.h.clone();
-        hr1.mul(&self.r1);
-        let mut a1lg = self.a1.clone();
-        let mut lg = self.g.clone();
-        lg.mul(&Field256::from(-1i8));
-        lg.add(&self.l);
-        lg.mul(&self.c1);
-        a1lg.add(&lg);
-        let p2 = hr1 == a1lg;
+        let p2_lhs = point_mul(self.h.clone(), &self.r1);
+        let p2_rhs = point_add(
+            self.a1.clone(),
+            &point_mul(
+                point_add(
+                    self.l.clone(),
+                    &point_mul(self.g.clone(), &Field256::from(-1i8)),
+                ),
+                &self.c1,
+            ),
+        );
+        let p2 = p2_lhs == p2_rhs;
 
         return p1 && p2;
     }

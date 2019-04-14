@@ -103,6 +103,33 @@ impl From<PublicKey> for Point {
     }
 }
 
+// Create commitment of y = g^x * h^r
+pub fn pedersen_commitment(g: Point, x: &Field256, h: Point, r: &Field256) -> Point {
+    let mut gx = point_mul(g, x);
+    let hr = point_mul(h, r);
+
+    gx.add(&hr);
+    gx
+}
+
+// Point mul g^x
+pub fn point_mul(g: Point, x: &Field256) -> Point {
+    let mut gx = g;
+    gx.mul(&x);
+    gx
+}
+
+/// g * h
+pub fn point_add(mut g: Point, h: &Point) -> Point {
+    g.add(h);
+    g
+}
+
+/// g^x * h
+pub fn point_mul_add(g: Point, x: &Field256, h: &Point) -> Point {
+    point_add(point_mul(g, x), h)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -140,6 +140,15 @@ impl<'a> Add<&'a Field256> for Field256 {
     }
 }
 
+impl<'a> Add<Field256> for &'a Field256 {
+    type Output = Field256;
+
+    fn add(self, rhs: Field256) -> Field256 {
+        let value = (&self.value + rhs.value).mod_floor(&self.p);
+        Field256::new(value)
+    }
+}
+
 impl Mul<Field256> for Field256 {
     type Output = Field256;
 
