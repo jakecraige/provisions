@@ -5,6 +5,7 @@ use crate::secp256k1::{pedersen_commitment, point_mul, Point};
 use num_bigint::BigUint;
 use num_traits::identities::Zero;
 use num_traits::pow::Pow;
+use rayon::prelude::*;
 use sha2::{Digest, Sha256};
 
 pub struct LiabilityProof {
@@ -37,15 +38,20 @@ fn compute_cid(identifier: &[u8], n: &BigUint) -> Vec<u8> {
 impl LiabilityProof {
     pub fn create(identifier: &[u8], balance: &BigUint, g: Point, h: Point) -> LiabilityProof {
         let bits = biguint_to_bits_le(balance, BALANCE_BITS);
-        let mut r = BigUint::zero();
 
-        let mut bit_proofs: Vec<BinaryProof> = Vec::with_capacity(bits.len());
-        for (i, bit) in bits.iter().enumerate() {
-            let r_i = Field256::rand();
-            r += &r_i.value << i;
-            let comm = BinaryProof::create(&Field256::from(*bit), &r_i, &g, &h);
-            bit_proofs.push(comm);
-        }
+        let initial_value = (BigUint::zero(), Vec::with_capacity(bits.len()));
+        let (r, bit_proofs): (BigUint, Vec<BinaryProof>) = bits
+            .par_iter()
+            .enumerate()
+            .fold_with(initial_value, |mut acc, (i, bit)| {
+                let r_i = Field256::rand();
+                let comm = BinaryProof::create(&Field256::from(*bit), &r_i, &g, &h);
+                acc.0 += &r_i.value << i;
+                acc.1.push(comm);
+                acc
+            })
+            .find_first(|_| true) // Unable to find a clean way to pull out the value here
+            .unwrap();
 
         let n = Field256::rand().value;
         let cid = compute_cid(identifier, &n);

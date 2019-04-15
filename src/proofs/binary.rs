@@ -23,6 +23,7 @@ use crate::secp256k1::{pedersen_commitment, point_add, point_inverse, point_mul,
 ///     h^r1 = a1(lg^-1)^c1
 ///
 /// Our implementation uses the Fiat-Shamir heuristic to make the protocol non-interactive.
+#[derive(Clone)]
 pub struct BinaryProof {
     g: Point,
     h: Point,

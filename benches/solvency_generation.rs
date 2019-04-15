@@ -53,21 +53,32 @@ fn gen_liabilities(num: usize, total: &BigUint) -> Vec<([u8; 32], BigUint)> {
     liabilities
 }
 
+fn build_asset_proofs(assets: &[(Option<Field256>, Point, BigUint)]) -> Vec<AssetProof> {
+    let g = provisions::g();
+    let h = provisions::h();
+
+    assets
+        .iter()
+        .map(|asset| AssetProof::create(asset.0.clone(), &asset.1, asset.2.clone(), &g, &h))
+        .collect()
+}
+
+fn build_liability_proofs(liabilities: &[([u8; 32], BigUint)]) -> Vec<LiabilityProof> {
+    let g = provisions::g();
+    let h = provisions::h();
+
+    liabilities
+        .iter()
+        .map(|liab| LiabilityProof::create(&liab.0, &liab.1, g.clone(), h.clone()))
+        .collect()
+}
+
 fn build_solvency_proof(
     assets: &[(Option<Field256>, Point, BigUint)],
     liabilities: &[([u8; 32], BigUint)],
 ) -> SolvencyProof {
-    let g = provisions::g();
-    let h = provisions::h();
-
-    let asset_proofs: Vec<AssetProof> = assets
-        .iter()
-        .map(|asset| AssetProof::create(asset.0.clone(), &asset.1, asset.2.clone(), &g, &h))
-        .collect();
-    let liability_proofs: Vec<LiabilityProof> = liabilities
-        .iter()
-        .map(|liab| LiabilityProof::create(&liab.0, &liab.1, g.clone(), h.clone()))
-        .collect();
+    let asset_proofs = build_asset_proofs(assets);
+    let liability_proofs = build_liability_proofs(liabilities);
 
     SolvencyProof::create(
         asset_proofs.as_slice(),
@@ -104,6 +115,35 @@ fn bench_solvency(c: &mut Criterion) {
             let (total, assets) = gen_assets(input.asset_count);
             let liabilities = gen_liabilities(input.liability_count, &total);
             b.iter(|| build_solvency_proof(assets.as_slice(), liabilities.as_slice()))
+        },
+        &[Input::new(10, 10)],
+    );
+
+    c.bench_function_over_inputs(
+        "ver-solvency",
+        |b, &input| {
+            let (total, assets) = gen_assets(input.asset_count);
+            let liabilities = gen_liabilities(input.liability_count, &total);
+            let proof = build_solvency_proof(assets.as_slice(), liabilities.as_slice());
+            b.iter(|| proof.verify())
+        },
+        &[Input::new(20, 20)],
+    );
+
+    c.bench_function_over_inputs(
+        "gen-assets",
+        |b, &input| {
+            let (_, assets) = gen_assets(input.asset_count);
+            b.iter(|| build_asset_proofs(assets.as_slice()))
+        },
+        &[Input::new(10, 10)],
+    );
+
+    c.bench_function_over_inputs(
+        "gen-liabs",
+        |b, &input| {
+            let liabilities = gen_liabilities(input.liability_count, &BigUint::from(1000u16));
+            b.iter(|| build_liability_proofs(liabilities.as_slice()))
         },
         &[Input::new(10, 10)],
     );

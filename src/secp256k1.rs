@@ -96,7 +96,7 @@ impl Point {
 
         Point {
             pk: new_point,
-            secp256k1: Secp256k1::new(),
+            secp256k1: self.secp256k1.clone(),
             infinity: false,
         }
     }
