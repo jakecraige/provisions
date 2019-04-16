@@ -1,6 +1,7 @@
 use crate::bigint::biguint_to_bytes_be;
 use crate::fields::field_sqrt;
 use crate::fields::Field256;
+use crate::serialization::{Deserialize, Serialize};
 use num_bigint::BigUint;
 use secp256k1::constants::{GENERATOR_X, GENERATOR_Y};
 use secp256k1::{All, Error, PublicKey, Secp256k1};
@@ -143,6 +144,28 @@ impl fmt::Display for Point {
 
 impl From<PublicKey> for Point {
     fn from(pk: PublicKey) -> Point {
+        Point {
+            pk,
+            secp256k1: SECP256K1.clone(),
+            infinity: false,
+        }
+    }
+}
+
+impl Serialize for Point {
+    /// Serialize into 33 bytes (compressed)
+    fn serialize(&self) -> Vec<u8> {
+        if self.infinity {
+            panic!("Never expected to serialize the point at infinity");
+        }
+        self.pk.serialize().to_vec()
+    }
+}
+
+impl Deserialize for Point {
+    fn deserialize(bytes: &[u8]) -> Point {
+        let pk = PublicKey::from_slice(bytes).expect("valid");
+
         Point {
             pk,
             secp256k1: SECP256K1.clone(),

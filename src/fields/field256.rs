@@ -1,4 +1,5 @@
 use crate::bigint::biguint_to_bytes_be;
+use crate::serialization::{Deserialize, Serialize};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
 use num_traits::{One, Zero};
@@ -84,6 +85,20 @@ impl Field256 {
     /// True if the value is 0 or 1. False otherwise.
     pub fn is_binary(&self) -> bool {
         self.value == BigUint::zero() || self.value == BigUint::one()
+    }
+}
+
+impl Serialize for Field256 {
+    /// Serialize into 32 bytes
+    fn serialize(&self) -> Vec<u8> {
+        biguint_to_bytes_be(&self.value, FIELD_BYTES)
+    }
+}
+
+impl Deserialize for Field256 {
+    fn deserialize(bytes: &[u8]) -> Field256 {
+        let value = BigUint::from_bytes_be(bytes);
+        Field256::from(value)
     }
 }
 

@@ -10,6 +10,7 @@ mod bigint;
 pub mod fields;
 pub mod proofs;
 pub mod secp256k1;
+pub mod serialization;
 mod util;
 
 lazy_static! {

@@ -1,6 +1,7 @@
 use crate::fields::Field256;
 use crate::proofs::compute_challenge;
 use crate::secp256k1::{pedersen_commitment, point_add, point_inverse, point_mul, Point};
+use crate::serialization::{Deserialize, Serialize};
 
 /// Commitment to x given: (g, h, l = g^x*h^y).
 ///
@@ -23,7 +24,7 @@ use crate::secp256k1::{pedersen_commitment, point_add, point_inverse, point_mul,
 ///     h^r1 = a1(lg^-1)^c1
 ///
 /// Our implementation uses the Fiat-Shamir heuristic to make the protocol non-interactive.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct BinaryProof {
     g: Point,
     h: Point,
@@ -96,6 +97,45 @@ impl BinaryProof {
     }
 }
 
+impl Serialize for BinaryProof {
+    /// Encodes into 32 * 3 + 33 * 5 = 261 bytes
+    fn serialize(&self) -> Vec<u8> {
+        let mut out = vec![];
+        out.extend(self.c1.serialize());
+        out.extend(self.r0.serialize());
+        out.extend(self.r1.serialize());
+        out.extend(self.l.serialize());
+        out.extend(self.a0.serialize());
+        out.extend(self.a1.serialize());
+        out.extend(self.g.serialize());
+        out.extend(self.h.serialize());
+        out
+    }
+}
+
+impl Deserialize for BinaryProof {
+    fn deserialize(bytes: &[u8]) -> BinaryProof {
+        let c1 = Field256::deserialize(&bytes[0..32]);
+        let r0 = Field256::deserialize(&bytes[32..64]);
+        let r1 = Field256::deserialize(&bytes[64..96]);
+        let l = Point::deserialize(&bytes[96..129]);
+        let a0 = Point::deserialize(&bytes[129..162]);
+        let a1 = Point::deserialize(&bytes[162..195]);
+        let g = Point::deserialize(&bytes[195..228]);
+        let h = Point::deserialize(&bytes[228..261]);
+        BinaryProof {
+            g,
+            h,
+            l,
+            a0,
+            a1,
+            c1,
+            r0,
+            r1,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,5 +173,18 @@ mod tests {
 
         let x = &Field256::from(25);
         BinaryProof::create(x, y, &g, &h);
+    }
+
+    #[test]
+    fn binary_proof_serialization() {
+        let g = crate::g();
+        let h = crate::h();
+        let y = &Field256::rand();
+
+        let x = &Field256::from(0);
+        let proof = BinaryProof::create(x, y, &g, &h);
+        let proof2 = BinaryProof::deserialize(&proof.serialize());
+
+        assert_eq!(proof, proof2);
     }
 }
