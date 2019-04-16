@@ -50,7 +50,11 @@ impl LiabilityProof {
                 acc.1.push(comm);
                 acc
             })
-            .find_first(|_| true) // Unable to find a clean way to pull out the value here
+            .reduce_with(|mut acc, (partial_total, bits)| {
+                acc.0 += partial_total;
+                acc.1.extend(bits);
+                acc
+            })
             .unwrap();
 
         let n = Field256::rand().value;
