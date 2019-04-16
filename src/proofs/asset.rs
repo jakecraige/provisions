@@ -9,7 +9,7 @@ use num_bigint::BigUint;
 pub struct AssetProof {
     g: Point,
     h: Point,
-    y: Point,
+    pub y: Point,
     b: Point,
     l: Point,
     a1: Point,
