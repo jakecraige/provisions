@@ -7,6 +7,19 @@ use secp256k1::{All, Error, PublicKey, Secp256k1};
 use sha2::{Digest, Sha256};
 use std::fmt;
 
+lazy_static! {
+    static ref SECP256K1: Secp256k1<All> = Secp256k1::new();
+    static ref G: Point = {
+        let mut g_bytes = Vec::with_capacity(65);
+        g_bytes.push(0x04);
+        g_bytes.extend_from_slice(&GENERATOR_X);
+        g_bytes.extend_from_slice(&GENERATOR_Y);
+        let g_pk = PublicKey::from_slice(&g_bytes).expect("valid");
+
+        Point::from(g_pk)
+    };
+}
+
 /// The order of the Field Z_p used for Secp256k1
 pub fn field_order() -> BigUint {
     let hex = b"fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f";
@@ -23,13 +36,7 @@ pub struct Point {
 impl Point {
     /// Initialize the base generator of the Secp256k1 curve
     pub fn g() -> Point {
-        let mut g_bytes = Vec::with_capacity(65);
-        g_bytes.push(0x04);
-        g_bytes.extend_from_slice(&GENERATOR_X);
-        g_bytes.extend_from_slice(&GENERATOR_Y);
-        let g = PublicKey::from_slice(&g_bytes).expect("valid");
-
-        Point::from(g)
+        G.clone()
     }
 
     pub fn infinity() -> Point {
@@ -138,7 +145,7 @@ impl From<PublicKey> for Point {
     fn from(pk: PublicKey) -> Point {
         Point {
             pk,
-            secp256k1: Secp256k1::new(),
+            secp256k1: SECP256K1.clone(),
             infinity: false,
         }
     }

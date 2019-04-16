@@ -9,7 +9,7 @@ fn it_can_produce_valid_proof_of_solvency() {
     let h = provisions::h();
 
     let x = Field256::from(1);
-    let y = &point_mul(Point::g(), x);
+    let y = &point_mul(Point::g(), &x);
     let bal = BigUint::from(10u8);
     let asset = AssetProof::create(Some(x), y, bal, &g, &h);
 
@@ -29,7 +29,7 @@ fn it_can_produce_invalid_proof_of_solvency() {
     let h = provisions::h();
 
     let x = Field256::from(1);
-    let y = &point_mul(Point::g(), x);
+    let y = &point_mul(Point::g(), &x);
     let bal = BigUint::from(10u8);
     let asset = AssetProof::create(Some(x), y, bal, &g, &h);
 

@@ -3,16 +3,23 @@
 
 use crate::secp256k1::Point;
 
+#[macro_use]
+extern crate lazy_static;
+
 mod bigint;
 pub mod fields;
 pub mod proofs;
 pub mod secp256k1;
 mod util;
 
+lazy_static! {
+    static ref h_point: Point = Point::from_hash(b"PROVISIONS").unwrap();
+}
+
 pub fn g() -> Point {
     Point::g()
 }
 
 pub fn h() -> Point {
-    Point::from_hash(b"PROVISIONS").unwrap()
+    h_point.clone()
 }
