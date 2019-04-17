@@ -1,7 +1,8 @@
-use crate::bigint::biguint_to_bits_le;
+use crate::bigint::{biguint_to_bits_le, biguint_to_bytes_be};
 use crate::fields::Field256;
 use crate::proofs::binary::BinaryProof;
 use crate::secp256k1::{pedersen_commitment, point_mul, Point};
+use crate::serialization::{Deserialize, Serialize};
 use num_bigint::BigUint;
 use num_traits::identities::Zero;
 use num_traits::pow::Pow;
@@ -106,6 +107,46 @@ impl LiabilityProof {
     }
 }
 
+impl Serialize for LiabilityProof {
+    /// Encodes into 32 + (261 * 51) + 39 = 13,382 bytes
+    fn serialize(&self) -> Vec<u8> {
+        let mut out = vec![];
+        out.extend(self.cid.clone());
+        out.extend(
+            self.bits
+                .iter()
+                .map(|bit| bit.serialize())
+                .flatten()
+                .collect::<Vec<u8>>(),
+        );
+        out.extend(biguint_to_bytes_be(&self.n, 32));
+        out.extend(self.r.to_bytes_be()); // variable length
+        out
+    }
+}
+
+impl Deserialize for LiabilityProof {
+    fn deserialize(bytes: &[u8]) -> LiabilityProof {
+        let (g, h) = (crate::g(), crate::h());
+        let cid = bytes[0..32].to_vec();
+        let bits = bytes[32..(32 + (261 * 51))]
+            .chunks(261)
+            .map(|proof_bytes| BinaryProof::deserialize(proof_bytes))
+            .collect::<Vec<BinaryProof>>();
+        let n = BigUint::from_bytes_be(&bytes[13343..13375]);
+        let r = BigUint::from_bytes_be(&bytes[13375..]);
+
+        LiabilityProof {
+            g,
+            h,
+            cid,
+            bits,
+            n,
+            r,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,5 +173,16 @@ mod tests {
         let commitment = LiabilityProof::create(&username[..], &balance, g, h);
 
         assert!(commitment.verify_as_customer(&username[..], &balance) "commitment not able to be verified");
+    }
+
+    #[test]
+    fn liability_proof_serialization() {
+        let g = crate::g();
+        let h = crate::h();
+        let username = b"testuser";
+        let balance = BigUint::from(10u8);
+
+        let proof = LiabilityProof::create(&username[..], &balance, g, h);
+        let proof2 = LiabilityProof::deserialize(&proof.serialize());
     }
 }
