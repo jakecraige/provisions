@@ -14,7 +14,7 @@ pub struct LiabilityProof {
     h: Point,
 
     /// Customer Identifier
-    cid: Vec<u8>,
+    cid: [u8; 32],
     /// Proofs of knowledge for each bit of the balance
     bits: Vec<BinaryProof>,
 
@@ -30,10 +30,13 @@ pub struct LiabilityProof {
 
 const BALANCE_BITS: usize = 51;
 
-fn compute_cid(identifier: &[u8], n: &BigUint) -> Vec<u8> {
+fn compute_cid(identifier: &[u8], n: &BigUint) -> [u8; 32] {
     let mut data = identifier.to_vec();
     data.extend(n.to_bytes_be());
-    Sha256::digest(&data).to_vec()
+    let digest = Sha256::digest(&data);
+    let mut out = [0; 32];
+    out.copy_from_slice(&digest[..]);
+    out
 }
 
 impl LiabilityProof {
@@ -111,7 +114,7 @@ impl Serialize for LiabilityProof {
     /// Encodes into 32 + (261 * 51) + 39 = 13,382 bytes
     fn serialize(&self) -> Vec<u8> {
         let mut out = vec![];
-        out.extend(self.cid.clone());
+        out.extend(&self.cid.clone());
         out.extend(
             self.bits
                 .iter()
@@ -128,7 +131,8 @@ impl Serialize for LiabilityProof {
 impl Deserialize for LiabilityProof {
     fn deserialize(bytes: &[u8]) -> LiabilityProof {
         let (g, h) = (crate::g(), crate::h());
-        let cid = bytes[0..32].to_vec();
+        let mut cid = [0; 32];
+        cid.copy_from_slice(&bytes[0..32]);
         let bits = bytes[32..(32 + (261 * 51))]
             .chunks(261)
             .map(|proof_bytes| BinaryProof::deserialize(proof_bytes))
