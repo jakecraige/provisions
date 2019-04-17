@@ -19,7 +19,7 @@ impl<'a> AssetProofBuilder<'a> {
 
     pub fn build(&mut self) {
         loop {
-            match self.ds.next_asset() {
+            match self.ds.next() {
                 None => break,
 
                 Some(asset) => {
@@ -79,7 +79,7 @@ mod tests {
     }
 
     impl AssetDataSource for MemoryAssetDataSource {
-        fn next_asset(&mut self) -> Option<AssetData> {
+        fn next(&mut self) -> Option<AssetData> {
             if self.assets.len() > 0 {
                 let asset = self.assets.remove(0);
                 Some(asset)

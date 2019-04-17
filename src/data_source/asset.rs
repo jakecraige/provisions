@@ -9,7 +9,7 @@ pub type AssetData = (Option<Field256>, Point, BigUint);
 
 pub trait AssetDataSource {
     /// Retrieve next asset to generate proof for
-    fn next_asset(&mut self) -> Option<AssetData>;
+    fn next(&mut self) -> Option<AssetData>;
 
     /// Store the generated proof in storage
     fn put_proof(&mut self, proof: AssetProof) -> Result<(), &str>;
@@ -32,7 +32,7 @@ impl Rocks {
 }
 
 impl AssetDataSource for Rocks {
-    fn next_asset(&mut self) -> Option<AssetData> {
+    fn next(&mut self) -> Option<AssetData> {
         if self.assets_to_generate == 0 {
             return None;
         }
