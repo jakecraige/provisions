@@ -7,9 +7,9 @@ use crate::secp256k1::Point;
 extern crate lazy_static;
 
 mod bigint;
+pub mod builders;
 pub mod data_source;
 pub mod fields;
-pub mod proof_builder;
 pub mod proofs;
 pub mod secp256k1;
 pub mod serialization;

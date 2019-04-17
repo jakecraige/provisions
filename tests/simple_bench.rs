@@ -1,5 +1,5 @@
+use provisions::builders::AssetProofBuilder;
 use provisions::data_source::asset::Rocks;
-use provisions::proof_builder::ProofBuilder;
 use rocksdb::{Options, DB};
 use std::time::Instant;
 
@@ -9,9 +9,9 @@ fn simple_rocks_bench() {
 
     {
         let now = Instant::now();
-        let asset_count = 1000;
-        let mut asset_ds = Rocks::new(asset_count, "rocks_test");
-        let mut builder = ProofBuilder::new(&mut asset_ds);
+        let asset_count = 10;
+        let mut asset_ds = Rocks::new(asset_count, path);
+        let mut builder = AssetProofBuilder::new(&mut asset_ds);
 
         builder.build();
 

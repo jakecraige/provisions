@@ -2,16 +2,16 @@ use crate::data_source::asset::AssetDataSource;
 use crate::proofs::AssetProof;
 use crate::secp256k1::Point;
 
-pub struct ProofBuilder<'a> {
-    asset_ds: &'a mut AssetDataSource,
+pub struct AssetProofBuilder<'a> {
+    ds: &'a mut AssetDataSource,
     g: Point,
     h: Point,
 }
 
-impl<'a> ProofBuilder<'a> {
-    pub fn new(asset_ds: &'a mut AssetDataSource) -> ProofBuilder {
-        ProofBuilder {
-            asset_ds,
+impl<'a> AssetProofBuilder<'a> {
+    pub fn new(ds: &'a mut AssetDataSource) -> AssetProofBuilder {
+        AssetProofBuilder {
+            ds,
             g: crate::g(),
             h: crate::h(),
         }
@@ -19,12 +19,12 @@ impl<'a> ProofBuilder<'a> {
 
     pub fn build(&mut self) {
         loop {
-            match self.asset_ds.next_asset() {
+            match self.ds.next_asset() {
                 None => break,
 
                 Some(asset) => {
                     let proof = AssetProof::create(asset.0, &asset.1, asset.2, &self.g, &self.h);
-                    self.asset_ds.put_proof(proof).expect("put works");
+                    self.ds.put_proof(proof).expect("put works");
                 }
             }
         }
@@ -40,11 +40,11 @@ mod tests {
     use num_bigint::BigUint;
 
     #[test]
-    fn proof_builder_builds_all_assets() {
+    fn asset_proof_builder_builds_all_assets() {
         let asset_count = 2;
         let assets = gen_assets(asset_count);
         let mut asset_ds = MemoryAssetDataSource::new(assets);
-        let mut builder = ProofBuilder::new(&mut asset_ds);
+        let mut builder = AssetProofBuilder::new(&mut asset_ds);
 
         builder.build();
 
